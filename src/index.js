@@ -1,7 +1,12 @@
 require("dotenv").config();
-const { Client, GatewayIntentBits } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  ApplicationRoleConnectionMetadataType,
+} = require("discord.js");
 const { updateUserExp, getUserExp } = require("./dataManager");
 const { logger } = require("./logger");
+const { getAllRanks } = require("./pocketbase/records/rank");
 const TOKEN = process.env.DISCORD_TOKEN;
 
 const client = new Client({
@@ -20,30 +25,17 @@ client.once("ready", () => {
   console.log(`Bot ist online! Eingeloggt als ${client.user.tag}`);
 });
 
-// Schwellenwerte und Ränge definieren
-const rankThresholds = [
-  { role: "Plastik", minExp: 0, maxExp: 99 },
-  { role: "Eisen", minExp: 100, maxExp: 499 },
-  { role: "Kupfer", minExp: 500, maxExp: 999 },
-  { role: "Silber", minExp: 1000, maxExp: 2499 },
-  { role: "Gold", minExp: 2500, maxExp: 4999 },
-  { role: "Platin", minExp: 5000, maxExp: 9999 },
-  { role: "Diamand", minExp: 10000, maxExp: 14999 },
-  { role: "Master", minExp: 15000, maxExp: 19999 },
-  { role: "✨ - Legende", minExp: 20000, maxExp: 29999 },
-  { role: "Champion", minExp: 30000, maxExp: Infinity },
-];
-
 // Funktion zum Abrufen der entsprechenden Rolle basierend auf EXP
-function getRoleForExp(exp) {
-  return rankThresholds.find((rank) => exp >= rank.minExp && exp <= rank.maxExp)
-    ?.role;
+async function getRoleForExp(exp) {
+  const ranks = await getAllRanks();
+  return ranks.find((rank) => exp >= rank.minimum && exp <= rank.maximum)?.name;
 }
 
 // Rolle basierend auf EXP zuweisen
 async function assignRole(member, exp) {
+  const ranks = await getAllRanks();
   const guild = member.guild;
-  const targetRoleName = getRoleForExp(exp);
+  const targetRoleName = await getRoleForExp(exp);
 
   if (!targetRoleName) {
     logger.info(
@@ -64,7 +56,7 @@ async function assignRole(member, exp) {
   }
 
   // Bestehende Ränge entfernen
-  const currentRanks = rankThresholds.map((rank) => rank.role);
+  const currentRanks = ranks.map((rank) => rank.name);
   const rolesToRemove = member.roles.cache.filter((role) =>
     currentRanks.includes(role.name)
   );
