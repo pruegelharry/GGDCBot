@@ -101,27 +101,62 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// EXP für Voice-Channel-Aufenthalt vergeben
-setInterval(async () => {
-    const guilds = client.guilds.cache;
+// Voice-Channel-Zeiterfassung
+const voiceTimes = new Map();
 
-    for (const guild of guilds.values()) {
-        const voiceChannels = guild.channels.cache.filter(channel => channel.type === 2); // Nur Voice-Channels
+client.on('voiceStateUpdate', async (oldState, newState) => {
+    const member = newState.member;
 
-        for (const channel of voiceChannels.values()) {
-            const members = channel.members.filter(member => !member.user.bot);
+    // Logge Bewegungen zwischen Voice-Channels
+    if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
+        logger.info(`${member.user.tag} hat den Voice-Channel "${oldState.channel?.name}" verlassen und ist in den Channel "${newState.channel?.name}" gewechselt.`);
+    }
 
-            if (members.size > 0) { // Mindestens zwei Mitglieder im Channel
-                for (const member of members.values()) {
-                    const expGained = 5; // EXP pro Intervall
-                    const newExp = updateUserExp(member.id, expGained);
-                    logger.info(`${member.user.tag} hat ${expGained} EXP erhalten (Voice-Channel). Gesamte EXP: ${newExp}`);
+    // Wenn das Mitglied einen Voice-Channel betritt
+    if (!oldState.channelId && newState.channelId) {
+        voiceTimes.set(member.id, Date.now());
+        logger.info(`${member.user.tag} hat den Voice-Channel "${newState.channel?.name}" betreten. Eintrittszeit gespeichert.`);
+        return;
+    }
 
-                    await assignRole(member, newExp);
-                }
-            }
+    // Wenn das Mitglied einen Voice-Channel verlässt
+    if (oldState.channelId && !newState.channelId) {
+        const joinTime = voiceTimes.get(member.id);
+
+        if (!joinTime) {
+            logger.warn(`Kein Eintrittszeitpunkt für ${member.user.tag} gefunden. Keine EXP-Berechnung möglich.`);
+            return;
+        }
+
+        const duration = (Date.now() - joinTime) / 1000; // Dauer in Sekunden
+        voiceTimes.delete(member.id);
+
+        if (duration < 60) {
+            logger.info(`${member.user.tag} war weniger als 1 Minute im Voice-Channel "${oldState.channel?.name}". Keine EXP vergeben.`);
+            return;
+        }
+
+        // EXP basierend auf der Aufenthaltsdauer berechnen
+        const minutes = Math.floor(duration / 60);
+        const expGained = minutes * 5; // 5 EXP pro Minute
+        const newExp = updateUserExp(member.id, expGained);
+
+        if (newExp === undefined) {
+            logger.error(`Fehler: EXP für ${member.user.tag} konnten nicht aktualisiert werden. EXP-Zuweisung abgebrochen.`);
+            return;
+        }
+
+        logger.info(`${member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldState.channel?.name}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
+
+        // Rolle basierend auf EXP zuweisen
+        try {
+            await assignRole(member, newExp);
+        } catch (err) {
+            logger.error(`Fehler bei der Rollenzuweisung für ${member.user.tag}: ${err.message}`);
         }
     }
-}, 10000); // Alle 60 Sekunden
+});
+
+
 
 client.login(TOKEN);
