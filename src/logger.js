@@ -1,5 +1,5 @@
-const { createLogger, format, transports } = require("winston");
-const logger = createLogger({
+import { createLogger, format, transports } from "winston";
+export const logger = createLogger({
   level: "info",
   format: format.combine(
     format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
@@ -12,4 +12,3 @@ const logger = createLogger({
     new transports.File({ filename: "./logs/bot.log" }),
   ],
 });
-module.exports = { logger };

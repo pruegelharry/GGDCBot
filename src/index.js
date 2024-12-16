@@ -1,12 +1,13 @@
-require("dotenv").config();
-const {
+import dotenv from 'dotenv'
+import {
   Client,
   GatewayIntentBits,
   ApplicationRoleConnectionMetadataType,
-} = require("discord.js");
-const { updateUserExp, getUserExp } = require("./dataManager");
-const { logger } = require("./logger");
-const { getAllRanks } = require("./pocketbase/records/rank");
+} from "discord.js";
+import { updateUserExp, getUserExp } from "./dataManager.js";
+import { logger } from "./logger.js";
+import { getAllRanks } from "./pocketbase/records/rank.js";
+dotenv.config()
 const TOKEN = process.env.DISCORD_TOKEN;
 
 const client = new Client({

@@ -1,5 +1,4 @@
-const PocketBase = require("pocketbase/cjs");
+import PocketBase from "pocketbase";
 
-const pb = new PocketBase("https://pocketbase.jankuepper.de/");
+export const pb = new PocketBase("https://pocketbase.jankuepper.de/");
 pb.autoCancellation(false);
-module.exports = { pb };

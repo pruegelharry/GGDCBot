@@ -1,7 +1,6 @@
-const { pb } = require("../index");
+import { pb } from "../index.js";
 
-async function getAllRanks() {
+export async function getAllRanks() {
   const ranks = await pb.collection("rank").getFullList();
   return ranks;
 }
-module.exports = { getAllRanks };

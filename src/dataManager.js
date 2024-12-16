@@ -1,4 +1,4 @@
-const fs = require("fs");
+import fs from "node:fs";
 const path = "./src/data.json";
 
 // Daten laden
@@ -16,7 +16,7 @@ function saveData(data) {
 }
 
 // Benutzer-EXP aktualisieren
-function updateUserExp(userId, expToAdd) {
+export function updateUserExp(userId, expToAdd) {
   const data = loadData();
   if (!data[userId]) {
     data[userId] = { exp: 0 };
@@ -27,9 +27,8 @@ function updateUserExp(userId, expToAdd) {
 }
 
 // Benutzer-EXP abrufen
-function getUserExp(userId) {
+export function getUserExp(userId) {
   const data = loadData();
   return data[userId]?.exp || 0;
 }
 
-module.exports = { updateUserExp, getUserExp };
