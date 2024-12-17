@@ -14,8 +14,8 @@ export async function addNewMember(discordId) {
   return member;
 }
 
-export async function updateMember(discordId, exp, rankId) {
-  const member = await pb.collection("member").update({
+export async function updateMember(id, discordId, exp, rankId) {
+  const member = await pb.collection("member").update(id, {
     discordId,
     exp,
     rank: rankId,
