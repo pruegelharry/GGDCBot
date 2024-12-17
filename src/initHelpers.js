@@ -1,4 +1,5 @@
 import { guildId } from "./index.js";
+import { logger } from "./logger.js";
 import { pb } from "./pocketbase/index.js";
 import { addNewMember, getAllMembers } from "./pocketbase/records/member.js";
 import { getAllRanks, setDiscordId } from "./pocketbase/records/rank.js";
@@ -34,6 +35,12 @@ export async function initializeMembers(client) {
         promises.push(addNewMember(dcMember.id));
       }
     });
-    await Promise.all(promises);
+    try {
+      await Promise.all(promises);
+    } catch (err) {
+      logger.error(
+        `Initializing missing members failed with the error: ${err}`
+      );
+    }
   }
 }
