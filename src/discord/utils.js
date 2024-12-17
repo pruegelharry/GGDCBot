@@ -13,7 +13,9 @@ export async function handleNewMessageExp(message) {
 
   const guildMember = await message?.guild?.members?.fetch(message?.author);
   if (guildMember) {
-    await assignRole(guildMember, newExp);
+    assignRole(guildMember, newExp).catch((error) => {
+      logger.error(error);
+    });
   }
 }
 
@@ -23,22 +25,19 @@ export async function assignRole(member, exp) {
   const { guild } = member;
   const { tag } = member.user;
 
-  const targetRoleName = ranks.find(
+  // name is the targetroles name
+  const { name, discordId } = ranks.find(
     (rank) => exp >= rank.minimum && exp <= rank.maximum
-  )?.name;
-  if (!targetRoleName) {
-    logger.info(`Keine passende Rolle für ${tag} (EXP: ${exp}) gefunden.`);
-    return;
-  }
-
-  const targetRole = guild.roles.cache.find(
-    (role) => role.name === targetRoleName
   );
+
+  if (!name) {
+    throw Error(`Keine passende Rolle für ${tag} (EXP: ${exp}) gefunden.`);
+  }
+  const targetRole = await guild.roles.fetch(discordId);
   if (!targetRole) {
-    logger.warn(
-      `Rolle "${targetRoleName}" existiert nicht auf dem Server "${guild.name}".`
+    throw Error(
+      `Rolle "${name}" existiert nicht auf dem Server "${guild.name}".`
     );
-    return;
   }
 
   // Bestehende Ränge entfernen
@@ -46,7 +45,6 @@ export async function assignRole(member, exp) {
   const rolesToRemove = member.roles.cache.filter((role) =>
     currentRanks.includes(role.name)
   );
-  console.log("-----", getMethods(member.roles.cache));
 
   for (const role of rolesToRemove.values()) {
     await member.roles.remove(role).catch((err) => {
@@ -65,18 +63,4 @@ export async function assignRole(member, exp) {
     });
     logger.info(`Rolle "${targetRole.name}" an ${tag} vergeben.`);
   }
-}
-
-function getMethods(obj) {
-  var result = [];
-  for (var id in obj) {
-    try {
-      if (typeof obj[id] == "function") {
-        result.push(id + ": " + obj[id].toString());
-      }
-    } catch (err) {
-      result.push(id + ": inaccessible");
-    }
-  }
-  return result;
 }
