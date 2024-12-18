@@ -121,7 +121,7 @@ client.on('voiceStateUpdate', (oldState, newState) => {
 
    
     if (oldState.channelId !== newState.channelId) {
-        const joinTime = voiceTimes.get(oldState.member.id);
+        const joinTime = voiceTimes.get(oldState.member.id); //
         voiceTimes.set(newState.member.id, Date.now());
         
         if (!joinTime) {
