@@ -1,28 +1,37 @@
 const fs = require('fs');
 const path = './data.json';
 
-// Daten laden
+// Daten aus der Datei laden
 function loadData() {
-    if (!fs.existsSync(path)) {
-        fs.writeFileSync(path, '{}');
+    try {
+        const rawData = fs.readFileSync(path, 'utf8');
+        return JSON.parse(rawData);
+    } catch (err) {
+        console.error('Fehler beim Laden der Daten:', err.message);
+        return {};
     }
-    const rawData = fs.readFileSync(path);
-    return JSON.parse(rawData);
 }
 
-// Daten speichern
+// Daten in die Datei speichern
 function saveData(data) {
-    fs.writeFileSync(path, JSON.stringify(data, null, 2));
+    try {
+        fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
+    } catch (err) {
+        console.error('Fehler beim Speichern der Daten:', err.message);
+    }
 }
 
 // Benutzer-EXP aktualisieren
-function updateUserExp(userId, expToAdd) {
+function updateUserExp(userId, expGained) {
     const data = loadData();
+
     if (!data[userId]) {
         data[userId] = { exp: 0 };
     }
-    data[userId].exp += expToAdd;
+
+    data[userId].exp += expGained;
     saveData(data);
+
     return data[userId].exp;
 }
 

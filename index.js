@@ -3,17 +3,9 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const { updateUserExp, getUserExp } = require('./dataManager');
 const TOKEN = process.env.DISCORD_TOKEN;
 const { createLogger, format, transports } = require('winston');
+const fs = require('fs');
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMembers
-    ]
-});
-
+// Logger konfigurieren
 const logger = createLogger({
     level: 'info',
     format: format.combine(
@@ -26,10 +18,21 @@ const logger = createLogger({
     ]
 });
 
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMembers
+    ]
+});
+
 logger.info('Bot gestartet!');
 
 client.once('ready', () => {
-    console.log(`Bot ist online! Eingeloggt als ${client.user.tag}`);
+    logger.info(`Bot ist online! Eingeloggt als ${client.user.tag}`);
+    
 });
 
 // Schwellenwerte und Ränge definieren
@@ -53,6 +56,7 @@ function getRoleForExp(exp) {
 
 // Rolle basierend auf EXP zuweisen
 async function assignRole(member, exp) {
+    logger.info(`AssignRole für ${member.user.tag} mit ${exp} EXP gestartet.`);
     const guild = member.guild;
     const targetRoleName = getRoleForExp(exp);
 
@@ -104,59 +108,60 @@ client.on('messageCreate', async (message) => {
 // Voice-Channel-Zeiterfassung
 const voiceTimes = new Map();
 
+client.on('voiceStateUpdate', (oldState, newState) => {
+    logger.info('DEBUG: Event empfangen');
+    logger.info(`oldState.channelId: ${oldState.channelId}, newState.channelId: ${newState.channelId}`);
+    logger.info(`oldState.member: ${oldState.member?.user.tag}, newState.member: ${newState.member?.user.tag}`);
+    const member = newState.member;
+    const oldChannel = oldState.channel?.name || 'None';
+    const newChannel = newState.channel?.name || 'None';
+
+   logger.info(`${member.user.tag} wechselte von "${oldChannel}" zu "${newChannel}"`);
+    
+
+   
+    if (oldState.channelId !== newState.channelId) {
+        const joinTime = voiceTimes.get(oldState.member.id);
+        voiceTimes.set(newState.member.id, Date.now());
+        
+        if (!joinTime) {
+            logger.warn(`Kein Eintrittszeitpunkt für ${oldState.member.user.tag} gefunden. Keine EXP-Berechnung möglich.`);
+            return;
+        }
+    
+        const duration = (Date.now() - joinTime) / 1000; // Dauer in Sekunden
+        voiceTimes.delete(oldState.member.id);
+        logger.info(`${duration}-----`);
+          if (duration >= 60) {
+            const minutes = Math.floor(duration / 60);
+            const expGained = minutes * 5; // 5 EXP pro Minute
+            const newExp = updateUserExp(oldState.member.id, expGained);
+    
+            logger.info(`${oldState.member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldState.channel.name}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
+        }
+    }
+    
+    
+    
+});
+
+
+// Map zur Verhinderung von doppelten Events
+const recentChannelUpdates = new Map();
+
 client.on('voiceStateUpdate', async (oldState, newState) => {
     const member = newState.member;
 
-    // Logge Bewegungen zwischen Voice-Channels
-    if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
-        logger.info(`${member.user.tag} hat den Voice-Channel "${oldState.channel?.name}" verlassen und ist in den Channel "${newState.channel?.name}" gewechselt.`);
-    }
-
-    // Wenn das Mitglied einen Voice-Channel betritt
-    if (!oldState.channelId && newState.channelId) {
-        voiceTimes.set(member.id, Date.now());
-        logger.info(`${member.user.tag} hat den Voice-Channel "${newState.channel?.name}" betreten. Eintrittszeit gespeichert.`);
+    // Schütze gegen schnelle Doppel-Events
+    const now = Date.now();
+    if (recentChannelUpdates.has(member.id) && (now - recentChannelUpdates.get(member.id)) < 2000) {
+        logger.debug(`${member.user.tag} hat in kurzer Zeit einen weiteren Channel gewechselt. Event ignoriert.`);
         return;
     }
+    recentChannelUpdates.set(member.id, now);
 
-    // Wenn das Mitglied einen Voice-Channel verlässt
-    if (oldState.channelId && !newState.channelId) {
-        const joinTime = voiceTimes.get(member.id);
-
-        if (!joinTime) {
-            logger.warn(`Kein Eintrittszeitpunkt für ${member.user.tag} gefunden. Keine EXP-Berechnung möglich.`);
-            return;
-        }
-
-        const duration = (Date.now() - joinTime) / 1000; // Dauer in Sekunden
-        voiceTimes.delete(member.id);
-
-        if (duration < 60) {
-            logger.info(`${member.user.tag} war weniger als 1 Minute im Voice-Channel "${oldState.channel?.name}". Keine EXP vergeben.`);
-            return;
-        }
-
-        // EXP basierend auf der Aufenthaltsdauer berechnen
-        const minutes = Math.floor(duration / 60);
-        const expGained = minutes * 5; // 5 EXP pro Minute
-        const newExp = updateUserExp(member.id, expGained);
-
-        if (newExp === undefined) {
-            logger.error(`Fehler: EXP für ${member.user.tag} konnten nicht aktualisiert werden. EXP-Zuweisung abgebrochen.`);
-            return;
-        }
-
-        logger.info(`${member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldState.channel?.name}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
-
-        // Rolle basierend auf EXP zuweisen
-        try {
-            await assignRole(member, newExp);
-        } catch (err) {
-            logger.error(`Fehler bei der Rollenzuweisung für ${member.user.tag}: ${err.message}`);
-        }
-    }
+    // Rest des Handlers bleibt wie oben
 });
-
 
 
 client.login(TOKEN);
