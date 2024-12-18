@@ -135,10 +135,18 @@ client.on('voiceStateUpdate', (oldState, newState) => {
           if (duration >= 60) {
             const minutes = Math.floor(duration / 60);
             const expGained = minutes * 5; // 5 EXP pro Minute
-            const newExp = updateUserExp(oldState.member.id, expGained);
+            try {
+                const newExp = updateUserExp(oldState.member.id, expGained);
+                logger.info(`${oldState.member.user.tag} hat insgesamt ${newExp} EXP.`);
+            } catch (error) {
+                logger.error(`Fehler beim Aktualisieren der EXP für ${oldState.member.user.tag}:`, error);
+            }
+            
     
             logger.info(`${oldState.member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldState.channel.name}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
-        }
+        }else{
+                logger.info(`${oldState.member.user.tag} war nicht lange genug im Voice-Channel um EXP zu erhalten, NOOB!`)} 
+        
     }
     
     
