@@ -4,6 +4,9 @@ const { updateUserExp, getUserExp } = require('./dataManager');
 const TOKEN = process.env.DISCORD_TOKEN;
 const { createLogger, format, transports } = require('winston');
 const fs = require('fs');
+const path = require('path');
+const voiceTimesFile = path.join(__dirname, 'voiceTimes.json');
+
 
 // Logger konfigurieren
 const logger = createLogger({
@@ -48,6 +51,33 @@ const rankThresholds = [
     { role: '✨ - Legende', minExp: 20000, maxExp: 29999 },
     { role: 'Champion', minExp: 30000, maxExp: Infinity }
 ];
+
+//Voice Times in Datei laden
+function loadVoiceTimes() {
+    if (!fs.existsSync(voiceTimesFile)) {
+        return {};
+    }
+    try {
+        const data = fs.readFileSync(voiceTimesFile, 'utf-8');
+        return JSON.parse(data);
+    } catch (error) {
+        logger.error('Fehler beim Laden der voiceTimes.json:', error);
+        return {};
+    }
+}
+
+//Voice Times in Datei speichern
+function saveVoiceTimes(data) {
+    try {
+        fs.writeFileSync(voiceTimesFile, JSON.stringify(data, null, 2), 'utf-8');
+        logger.info('voiceTimes.json wurde erfolgreich gespeichert.');
+    } catch (error) {
+        logger.error('Fehler beim Speichern der voiceTimes.json:', error);
+    }
+}
+
+// Globale Variable für gespeicherte Zeiten
+const storedVoiceTimes = loadVoiceTimes();
 
 // Funktion zum Abrufen der entsprechenden Rolle basierend auf EXP
 function getRoleForExp(exp) {
@@ -133,6 +163,14 @@ client.on('voiceStateUpdate', (oldState, newState) => {
             if (duration >= 60) {
                 const minutes = Math.floor(duration / 60);
                 const expGained = minutes * 5; // 5 EXP pro Minute
+                const userTimes = storedVoiceTimes[userId] || {};
+                userTimes[oldChannel] = (userTimes[oldChannel] || 0) + duration; // Dauer kumulieren
+                storedVoiceTimes[userId] = userTimes;
+
+            // Speichere die aktualisierten Daten
+            saveVoiceTimes(storedVoiceTimes);
+
+            logger.info(`${member.user.tag} hat insgesamt ${Math.floor(userTimes[oldChannel])} Sekunden im Channel "${oldChannel}" verbracht.`);
                 try {
                     const newExp = updateUserExp(userId, expGained);
                     logger.info(`${member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldChannel}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
@@ -174,66 +212,95 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 }); */
 
 client.on('messageCreate', async (message) => {
-    // Ignoriere Nachrichten von Bots oder ohne Präfix
     if (message.author.bot || !message.content.startsWith('!')) return;
 
-    // Extrahiere den Befehl und Argumente
     const args = message.content.slice(1).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
     if (command === 'voicetime') {
         const userId = message.author.id;
 
-        // Stelle sicher, dass voiceTimes geladen ist
+        // Lade die gespeicherten Zeiten aus der Datei
+        const storedVoiceTimes = JSON.parse(fs.readFileSync('./voiceTimes.json', 'utf8'));
+
+        // Prüfe, ob der Nutzer in der Datei existiert
         if (!storedVoiceTimes[userId]) {
             message.reply('Du hast noch keine Zeit in einem Voice-Channel verbracht!');
             return;
         }
 
-        // Berechne die Gesamtzeit in Stunden, Minuten, Sekunden
-        const totalTime = storedVoiceTimes[userId].totalTime || 0;
-        const hours = Math.floor(totalTime / 3600);
-        const minutes = Math.floor((totalTime % 3600) / 60);
-        const seconds = Math.floor(totalTime % 60);
+        // Channel-Daten des Nutzers
+        const userChannels = storedVoiceTimes[userId];
 
-        // Schicke eine Antwort an den Nutzer
+        // Zeiten aufteilen: AFK-Zeit und andere Channel-Zeiten
+        const afkTime = userChannels['💤 - AFK'] || 0;
+        const otherChannelsTime = Object.entries(userChannels)
+            .filter(([channelName]) => channelName !== '💤 - AFK') // Alle außer AFK
+            .reduce((sum, [, time]) => sum + time, 0); // Summiere die Zeiten
+
+        // Gesamtzeit für andere Channels berechnen
+        const totalHours = Math.floor(otherChannelsTime / 3600);
+        const totalMinutes = Math.floor((otherChannelsTime % 3600) / 60);
+        const totalSeconds = Math.floor(otherChannelsTime % 60);
+
+        // Zeit im AFK-Channel berechnen
+        const afkHours = Math.floor(afkTime / 3600);
+        const afkMinutes = Math.floor((afkTime % 3600) / 60);
+        const afkSeconds = Math.floor(afkTime % 60);
+
+        // Antwort ausgeben
         message.reply(
-            `Du hast bisher ${hours} Stunden, ${minutes} Minuten und ${seconds} Sekunden in Voice-Channels verbracht. 🎧`
+            `🎧 **Deine Voice-Channel-Zeit:**\n\n` +
+            `🟢 Aktive Channels: **${totalHours} Stunden, ${totalMinutes} Minuten und ${totalSeconds} Sekunden**\n` +
+            `💤 AFK-Channel: **${afkHours} Stunden, ${afkMinutes} Minuten und ${afkSeconds} Sekunden**\n\n` +
+            `✨ Weiter so, bleib aktiv!`
         );
     }
 });
 
+client.on('messageCreate', async (message) => {
+    if (message.content === '!topAFK') {
+        try {
+            const storedVoiceTimes = JSON.parse(fs.readFileSync('./voiceTimes.json', 'utf-8'));
+            const afkChannelName = '💤 - AFK'; // Name des AFK-Channels
+            
+            // Filtere und berechne die Zeiten für den AFK-Channel
+            const afkTimes = Object.entries(storedVoiceTimes)
+                .filter(([_, channels]) => channels[afkChannelName])
+                .map(([userId, channels]) => ({
+                    userId,
+                    time: channels[afkChannelName],
+                }));
+            
+            // Sortiere die Mitglieder nach Zeit im AFK-Channel
+            const sortedAfkTimes = afkTimes.sort((a, b) => b.time - a.time).slice(0, 3);
 
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isCommand()) return;
+            // Lade Mitgliederinformationen falls nicht gecacht
+            const topAfkDetails = await Promise.all(sortedAfkTimes.map(async ({ userId, time }, index) => {
+                const member = await message.guild.members.fetch(userId).catch(() => null);
+                const userTag = member?.user?.tag || 'Unbekanntes Mitglied';
+                const hours = Math.floor(time / 3600);
+                const minutes = Math.floor((time % 3600) / 60);
+                return `**${index + 1}.** ${userTag} - 🕒 ${hours} Stunden, ${minutes} Minuten`;
+            }));
 
-    if (interaction.commandName === 'voicetime') {
-        const userId = interaction.user.id;
+            // Antwort senden
+            const reply = topAfkDetails.length > 0
+                ? topAfkDetails.join('\n')
+                : 'Niemand hat bisher Zeit im AFK-Channel verbracht. 🎉';
 
-        if (!storedVoiceTimes[userId]) {
-            await interaction.reply('Du hast noch keine Zeit in einem Voice-Channel verbracht!');
-            return;
+            message.reply(`🏆 **Top 3 Mitglieder im AFK-Channel (${afkChannelName})** 💤\n${reply}`);
+        } catch (error) {
+            console.error('Fehler beim Verarbeiten des Befehls !topAFK:', error);
+            message.reply('❌ Es gab ein Problem beim Abrufen der Daten. Bitte versuche es später erneut.');
         }
-
-        const totalTime = storedVoiceTimes[userId].totalTime || 0;
-        const hours = Math.floor(totalTime / 3600);
-        const minutes = Math.floor((totalTime % 3600) / 60);
-        const seconds = Math.floor(totalTime % 60);
-
-        await interaction.reply(
-            `Du hast bisher ${hours} Stunden, ${minutes} Minuten und ${seconds} Sekunden in Voice-Channels verbracht. 🎧`
-        );
     }
 });
 
-// Slash-Command-Registrierung (z. B. bei Bot-Start)
-client.on('ready', () => {
-    const guild = client.guilds.cache.first(); // Setze hier die richtige Guild-ID ein, falls nötig
-    guild.commands.create({
-        name: 'voicetime',
-        description: 'Zeigt an, wie viel Zeit du in Voice-Channels verbracht hast',
-    });
-});
+
+
+
+
 
 
 client.login(TOKEN);

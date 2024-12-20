@@ -6,6 +6,9 @@ const { createLogger, format, transports } = require('winston');
 const fs = require('fs');
 const path = require('path');
 const voiceTimesFile = path.join(__dirname, 'voiceTimes.json');
+const messageCountsPath = path.join(__dirname, 'messageCounts.json');
+
+let messageCounts = {};
 
 
 // Logger konfigurieren
@@ -51,6 +54,24 @@ const rankThresholds = [
     { role: '✨ - Legende', minExp: 20000, maxExp: 29999 },
     { role: 'Champion', minExp: 30000, maxExp: Infinity }
 ];
+
+// Messages Count laden
+if (fs.existsSync(messageCountsPath)) {
+    messageCounts = JSON.parse(fs.readFileSync(messageCountsPath, 'utf-8'));
+}
+
+// Event für Nachrichtenerstellung
+client.on('messageCreate', (message) => {
+    if (message.author.bot) return; // Bots ignorieren
+
+    const userId = message.author.id;
+    messageCounts[userId] = (messageCounts[userId] || 0) + 1;
+
+    // Messages Count in Datei speichern
+    fs.writeFileSync(messageCountsPath, JSON.stringify(messageCounts, null, 2));
+});
+
+
 
 //Voice Times in Datei laden
 function loadVoiceTimes() {
@@ -210,6 +231,128 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
     // Rest des Handlers bleibt wie oben
 }); */
+
+
+//Voicetime abfragen
+client.on('messageCreate', async (message) => {
+    if (message.author.bot || !message.content.startsWith('!')) return;
+
+    const args = message.content.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'voicetime') {
+        const userId = message.author.id;
+
+        // Lade die gespeicherten Zeiten aus der Datei
+        const storedVoiceTimes = JSON.parse(fs.readFileSync('./voiceTimes.json', 'utf8'));
+
+        // Prüfe, ob der Nutzer in der Datei existiert
+        if (!storedVoiceTimes[userId]) {
+            message.reply('Du hast noch keine Zeit in einem Voice-Channel verbracht!');
+            return;
+        }
+
+        // Channel-Daten des Nutzers
+        const userChannels = storedVoiceTimes[userId];
+
+        // Zeiten aufteilen: AFK-Zeit und andere Channel-Zeiten
+        const afkTime = userChannels['💤 - AFK'] || 0;
+        const otherChannelsTime = Object.entries(userChannels)
+            .filter(([channelName]) => channelName !== '💤 - AFK') // Alle außer AFK
+            .reduce((sum, [, time]) => sum + time, 0); // Summiere die Zeiten
+
+        // Gesamtzeit für andere Channels berechnen
+        const totalHours = Math.floor(otherChannelsTime / 3600);
+        const totalMinutes = Math.floor((otherChannelsTime % 3600) / 60);
+        const totalSeconds = Math.floor(otherChannelsTime % 60);
+
+        // Zeit im AFK-Channel berechnen
+        const afkHours = Math.floor(afkTime / 3600);
+        const afkMinutes = Math.floor((afkTime % 3600) / 60);
+        const afkSeconds = Math.floor(afkTime % 60);
+
+        // Antwort ausgeben
+        message.reply(
+            `🎧 **Deine Voice-Channel-Zeit:**\n\n` +
+            `🟢 Aktive Channels: **${totalHours} Stunden, ${totalMinutes} Minuten und ${totalSeconds} Sekunden**\n` +
+            `💤 AFK-Channel: **${afkHours} Stunden, ${afkMinutes} Minuten und ${afkSeconds} Sekunden**\n\n` +
+            `✨ Weiter so, bleib aktiv!`
+        );
+    }
+});
+//Befehl Top 3 AFK
+client.on('messageCreate', async (message) => {
+    if (message.content === '!topAFK') {
+        try {
+            const storedVoiceTimes = JSON.parse(fs.readFileSync('./voiceTimes.json', 'utf-8'));
+            const afkChannelName = '💤 - AFK'; // Name des AFK-Channels
+            
+            // Filtere und berechne die Zeiten für den AFK-Channel
+            const afkTimes = Object.entries(storedVoiceTimes)
+                .filter(([_, channels]) => channels[afkChannelName])
+                .map(([userId, channels]) => ({
+                    userId,
+                    time: channels[afkChannelName],
+                }));
+            
+            // Sortiere die Mitglieder nach Zeit im AFK-Channel
+            const sortedAfkTimes = afkTimes.sort((a, b) => b.time - a.time).slice(0, 3);
+
+            // Lade Mitgliederinformationen falls nicht gecacht
+            const topAfkDetails = await Promise.all(sortedAfkTimes.map(async ({ userId, time }, index) => {
+                const member = await message.guild.members.fetch(userId).catch(() => null);
+                const userTag = member?.user?.tag || 'Unbekanntes Mitglied';
+                const hours = Math.floor(time / 3600);
+                const minutes = Math.floor((time % 3600) / 60);
+                return `**${index + 1}.** ${userTag} - 🕒 ${hours} Stunden, ${minutes} Minuten`;
+            }));
+
+            // Antwort senden
+            const reply = topAfkDetails.length > 0
+                ? topAfkDetails.join('\n')
+                : 'Niemand hat bisher Zeit im AFK-Channel verbracht. 🎉';
+
+            message.reply(`🏆 **Top 3 Mitglieder im AFK-Channel (${afkChannelName})** 💤\n${reply}`);
+        } catch (error) {
+            console.error('Fehler beim Verarbeiten des Befehls !topAFK:', error);
+            message.reply('❌ Es gab ein Problem beim Abrufen der Daten. Bitte versuche es später erneut.');
+        }
+    }
+});
+
+//Befehl Messages Count 
+client.on('messageCreate', (message) => {
+    if (message.content.startsWith('!messages')) {
+        const userId = message.author.id;
+        const count = messageCounts[userId] || 0;
+
+        message.reply(`📨 Du hast insgesamt **${count} Nachrichten** geschrieben.`);
+    }
+});
+
+//Befehl Top 3 Messages
+client.on('messageCreate', (message) => {
+    if (message.content.startsWith('!topmessages')) {
+        // Nachrichten zählen sortieren
+        const topUsers = Object.entries(messageCounts)
+            .sort(([, countA], [, countB]) => countB - countA)
+            .slice(0, 3);
+
+        const topList = topUsers.map(([userId, count], index) => {
+            const member = message.guild.members.cache.get(userId);
+            const userName = member ? member.user.tag : 'Unbekanntes Mitglied';
+            return `${index + 1}. ${userName} - **${count} Nachrichten**`;
+        });
+
+        message.reply(`🏆 **Top 3 Mitglieder nach Nachrichten:**\n${topList.join('\n')}`);
+    }
+});
+
+
+
+
+
+
 
 
 client.login(TOKEN);
