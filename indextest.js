@@ -4,6 +4,9 @@ const { updateUserExp, getUserExp } = require('./dataManager');
 const TOKEN = process.env.DISCORD_TOKEN;
 const { createLogger, format, transports } = require('winston');
 const fs = require('fs');
+const path = require('path');
+const voiceTimesFile = path.join(__dirname, 'voiceTimes.json');
+
 
 // Logger konfigurieren
 const logger = createLogger({
@@ -48,6 +51,33 @@ const rankThresholds = [
     { role: '✨ - Legende', minExp: 20000, maxExp: 29999 },
     { role: 'Champion', minExp: 30000, maxExp: Infinity }
 ];
+
+//Voice Times in Datei laden
+function loadVoiceTimes() {
+    if (!fs.existsSync(voiceTimesFile)) {
+        return {};
+    }
+    try {
+        const data = fs.readFileSync(voiceTimesFile, 'utf-8');
+        return JSON.parse(data);
+    } catch (error) {
+        logger.error('Fehler beim Laden der voiceTimes.json:', error);
+        return {};
+    }
+}
+
+//Voice Times in Datei speichern
+function saveVoiceTimes(data) {
+    try {
+        fs.writeFileSync(voiceTimesFile, JSON.stringify(data, null, 2), 'utf-8');
+        logger.info('voiceTimes.json wurde erfolgreich gespeichert.');
+    } catch (error) {
+        logger.error('Fehler beim Speichern der voiceTimes.json:', error);
+    }
+}
+
+// Globale Variable für gespeicherte Zeiten
+const storedVoiceTimes = loadVoiceTimes();
 
 // Funktion zum Abrufen der entsprechenden Rolle basierend auf EXP
 function getRoleForExp(exp) {
@@ -110,49 +140,58 @@ const voiceTimes = new Map();
 
 client.on('voiceStateUpdate', (oldState, newState) => {
     logger.info('DEBUG: Event empfangen');
-    logger.info(`oldState.channelId: ${oldState.channelId}, newState.channelId: ${newState.channelId}`);
-    logger.info(`oldState.member: ${oldState.member?.user.tag}, newState.member: ${newState.member?.user.tag}`);
-    const member = newState.member;
+    const member = newState.member || oldState.member;
+    const userId = member.id;
+
+    // Wenn sich der Voice-Channel nicht geändert hat, ignorieren
+    if (oldState.channelId === newState.channelId) {
+        logger.info(`${member.user.tag} hat keinen Channel gewechselt.`);
+        return;
+    }
+
     const oldChannel = oldState.channel?.name || 'None';
     const newChannel = newState.channel?.name || 'None';
+    logger.info(`${member.user.tag} wechselte von "${oldChannel}" zu "${newChannel}"`);
 
-   logger.info(`${member.user.tag} wechselte von "${oldChannel}" zu "${newChannel}"`);
-    
-
-   
-    if (oldState.channelId !== newState.channelId) {
-        const joinTime = voiceTimes.get(oldState.member.id);
-        logger.info(`Join Time: ${joinTime}`);
-        voiceTimes.set(newState.member.id, Date.now());
-        
+    // Verlassen des alten Channels
+    if (oldState.channelId) {
+        const joinTime = voiceTimes.get(userId);
         if (!joinTime) {
-            logger.warn(`Kein Eintrittszeitpunkt für ${oldState.member.user.tag} gefunden. Keine EXP-Berechnung möglich.`);
-            return;
-        }
-    
-        const duration = (Date.now() - joinTime) / 1000; // Dauer in Sekunden
-        voiceTimes.delete(oldState.member.id);
-          if (duration >= 60) {
-            const minutes = Math.floor(duration / 60);
-            const expGained = minutes * 5; // 5 EXP pro Minute
-            try {
-                const newExp = updateUserExp(oldState.member.id, expGained);
-                logger.info(`${oldState.member.user.tag} hat insgesamt ${newExp} EXP.`);
-                logger.info(`${oldState.member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldState.channel.name}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
-            } catch (error) {
-                logger.error(`Fehler beim Aktualisieren der EXP für ${oldState.member.user.tag}:`, error);
+            logger.warn(`Kein Eintrittszeitpunkt für ${member.user.tag} gefunden. Keine EXP-Berechnung möglich.`);
+        } else {
+            const duration = (Date.now() - joinTime) / 1000; // Dauer in Sekunden
+            if (duration >= 60) {
+                const minutes = Math.floor(duration / 60);
+                const expGained = minutes * 5; // 5 EXP pro Minute
+                const userTimes = storedVoiceTimes[userId] || {};
+                userTimes[oldChannel] = (userTimes[oldChannel] || 0) + duration; // Dauer kumulieren
+                storedVoiceTimes[userId] = userTimes;
+
+            // Speichere die aktualisierten Daten
+            saveVoiceTimes(storedVoiceTimes);
+
+            logger.info(`${member.user.tag} hat insgesamt ${Math.floor(userTimes[oldChannel])} Sekunden im Channel "${oldChannel}" verbracht.`);
+                try {
+                    const newExp = updateUserExp(userId, expGained);
+                    logger.info(`${member.user.tag} war ${minutes} Minuten im Voice-Channel "${oldChannel}" und hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`);
+                } catch (error) {
+                    logger.error(`Fehler beim Aktualisieren der EXP für ${member.user.tag}:`, error);
+                }
+            } else {
+                logger.info(`${member.user.tag} war nicht lange genug (${duration} Sekunden) im Voice-Channel, um EXP zu erhalten.`);
             }
-            
-    
-            
-        }else{
-                logger.info(`${oldState.member.user.tag} war nicht lange genug (${duration} Sekunden) im Voice-Channel um EXP zu erhalten, NOOB!`)} 
-        
+        }
+        // Alte Join-Zeit löschen
+        voiceTimes.delete(userId);
     }
-    
-    
-    
+
+    // Betreten des neuen Channels
+    if (newState.channelId) {
+        voiceTimes.set(userId, Date.now());
+        logger.info(`${member.user.tag} hat den Voice-Channel "${newChannel}" betreten. Eintrittszeit gespeichert.`);
+    }
 });
+
 
 
 /* // Map zur Verhinderung von doppelten Events

@@ -21,6 +21,9 @@ function saveData(data) {
     }
 }
 
+
+
+
 // Benutzer-EXP aktualisieren
 function updateUserExp(userId, expGained) {
     const data = loadData();

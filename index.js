@@ -173,5 +173,67 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     // Rest des Handlers bleibt wie oben
 }); */
 
+client.on('messageCreate', async (message) => {
+    // Ignoriere Nachrichten von Bots oder ohne Präfix
+    if (message.author.bot || !message.content.startsWith('!')) return;
+
+    // Extrahiere den Befehl und Argumente
+    const args = message.content.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'voicetime') {
+        const userId = message.author.id;
+
+        // Stelle sicher, dass voiceTimes geladen ist
+        if (!storedVoiceTimes[userId]) {
+            message.reply('Du hast noch keine Zeit in einem Voice-Channel verbracht!');
+            return;
+        }
+
+        // Berechne die Gesamtzeit in Stunden, Minuten, Sekunden
+        const totalTime = storedVoiceTimes[userId].totalTime || 0;
+        const hours = Math.floor(totalTime / 3600);
+        const minutes = Math.floor((totalTime % 3600) / 60);
+        const seconds = Math.floor(totalTime % 60);
+
+        // Schicke eine Antwort an den Nutzer
+        message.reply(
+            `Du hast bisher ${hours} Stunden, ${minutes} Minuten und ${seconds} Sekunden in Voice-Channels verbracht. 🎧`
+        );
+    }
+});
+
+
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isCommand()) return;
+
+    if (interaction.commandName === 'voicetime') {
+        const userId = interaction.user.id;
+
+        if (!storedVoiceTimes[userId]) {
+            await interaction.reply('Du hast noch keine Zeit in einem Voice-Channel verbracht!');
+            return;
+        }
+
+        const totalTime = storedVoiceTimes[userId].totalTime || 0;
+        const hours = Math.floor(totalTime / 3600);
+        const minutes = Math.floor((totalTime % 3600) / 60);
+        const seconds = Math.floor(totalTime % 60);
+
+        await interaction.reply(
+            `Du hast bisher ${hours} Stunden, ${minutes} Minuten und ${seconds} Sekunden in Voice-Channels verbracht. 🎧`
+        );
+    }
+});
+
+// Slash-Command-Registrierung (z. B. bei Bot-Start)
+client.on('ready', () => {
+    const guild = client.guilds.cache.first(); // Setze hier die richtige Guild-ID ein, falls nötig
+    guild.commands.create({
+        name: 'voicetime',
+        description: 'Zeigt an, wie viel Zeit du in Voice-Channels verbracht hast',
+    });
+});
+
 
 client.login(TOKEN);
