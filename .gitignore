@@ -1,4 +1,4 @@
 //Hier fügt man Dateien hinzu die nicht auf Git hochgeladen werden sollen
 
 .env
-node_modules
+node_modules/
