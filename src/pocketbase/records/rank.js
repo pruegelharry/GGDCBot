@@ -1,7 +1,26 @@
+import { logger } from "../../logger.js";
 import { pb } from "../index.js";
 
 export async function getAllRanks() {
   return pb.collection("rank").getFullList();
+}
+
+export async function createRank(id, name, minimum, maximum) {
+  return pb.collection("rank").create({
+    id,
+    name,
+    minimum,
+    maximum,
+  });
+}
+
+export async function getRankByName(name) {
+  return pb
+    .collection("rank")
+    .getFirstListItem(`name="${name}"`)
+    .catch(
+      (err) => (err.status === 404 ? undefined : logger.error(err)) // can be ignored since we know that the rank might not yet exist
+    );
 }
 
 export async function setDiscordId(rankId, discordId) {

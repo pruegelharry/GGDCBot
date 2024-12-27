@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import { getMemberByDiscordId } from "../../pocketbase/records/member.js";
+import { getMemberById } from "../../pocketbase/records/member.js";
 import { updateUserExp } from "../../dataManager.js";
 
 export const data = new SlashCommandBuilder()
@@ -29,7 +29,7 @@ export const data = new SlashCommandBuilder()
   );
 export async function execute(interaction) {
   const amount = Math.floor(Number(interaction.options.getString("amount")));
-  const { exp } = await getMemberByDiscordId(interaction.user.id);
+  const { exp } = await getMemberById(interaction.user.id);
   if (Number.isNaN(amount)) {
     interaction.reply("The amount is not a number!");
     return;

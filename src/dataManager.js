@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import {
   addNewMember,
-  getMemberByDiscordId,
+  getMemberById,
   updateMember,
 } from "./pocketbase/records/member.js";
 import { getAllRanks } from "./pocketbase/records/rank.js";
@@ -23,13 +23,13 @@ function saveData(data) {
 
 // Benutzer-EXP aktualisieren
 export async function updateUserExp(userId, expToAdd) {
-  let member = await getMemberByDiscordId(userId);
+  let member = await getMemberById(userId);
 
   // check ob benutzer schon existiert
   if (!member?.id) {
     member = await addNewMember(userId);
   }
-  const { id, rank, exp, discordId } = member;
+  const { id, rank, exp } = member;
   // check for rank update
   const newExp = exp + expToAdd;
   let potentiallyNewRank = rank;
@@ -39,7 +39,7 @@ export async function updateUserExp(userId, expToAdd) {
       (rk) => rk.maximum > newExp && newExp > rk.minimum
     );
   }
-  return updateMember(id, discordId, newExp, potentiallyNewRank);
+  return updateMember(id, { exp: newExp, rankId: potentiallyNewRank.id });
 }
 
 // Benutzer-EXP abrufen
