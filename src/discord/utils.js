@@ -1,19 +1,24 @@
 import { logger } from "../logger.js";
-import { updateUserExp, getUserExp } from "../dataManager.js";
+import { updateUserExp } from "../dataManager.js";
 import { getAllRanks } from "../pocketbase/records/rank.js";
 
 export async function handleNewMessageExp(message) {
   if (message.author.bot) return;
 
   const expGained = 10;
-  const newExp = updateUserExp(message.author.id, expGained);
+  let updatedUser;
+  try {
+    updatedUser = await updateUserExp(message.author.id, expGained);
+  } catch (error) {
+    logger.error(error);
+  }
   logger.info(
-    `${message.author.tag} hat ${expGained} EXP erhalten. Gesamte EXP: ${newExp}`
+    `${message.author.tag} hat ${expGained} EXP erhalten. Gesamte EXP: ${updatedUser.exp}`
   );
 
   const guildMember = await message?.guild?.members?.fetch(message?.author);
   if (guildMember) {
-    assignRole(guildMember, newExp).catch((error) => {
+    assignRole(guildMember, updatedUser.exp).catch((error) => {
       logger.error(error);
     });
   }
@@ -24,7 +29,6 @@ export async function assignRole(member, exp) {
   const ranks = await getAllRanks();
   const { guild } = member;
   const { tag } = member.user;
-
   // name is the targetroles name
   const { name, discordId } = ranks.find(
     (rank) => exp >= rank.minimum && exp <= rank.maximum
