@@ -19,6 +19,7 @@ import {
   data as cointossData,
   execute as cointossFunc,
 } from "./discord/commands/cointoss.js";
+import { handleVoiceStateUpdate } from "./discord/voiceStateUpdateUtils.js";
 dotenv.config();
 const TOKEN = process.env.DISCORD_TOKEN;
 const POCKETBASE_AUTH = process.env.POCKETBASE_AUTH;
@@ -58,6 +59,7 @@ client.once(Events.ClientReady, async (client) => {
   initializePoketBase(POCKETBASE_AUTH);
   await initializeRankIds(client);
   await initializeMembers(client);
+  // initially look for ppl in voiceChannels to start counting voicetime
   logger.info(`Bot ist online! Eingeloggt als ${client.user.tag}`);
 });
 
@@ -65,6 +67,7 @@ client.once(Events.ClientReady, async (client) => {
 client.on(Events.MessageCreate, async (message) =>
   handleNewMessageExp(message)
 );
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -73,5 +76,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await execute(interaction);
   }
 });
+
+client.on(Events.VoiceStateUpdate, (oldState, newState) =>
+  handleVoiceStateUpdate(oldState, newState)
+);
 
 client.login(TOKEN);
