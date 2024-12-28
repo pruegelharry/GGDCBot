@@ -1,6 +1,7 @@
 import { logger } from "../logger.js";
 import { updateUserExp } from "../dataManager.js";
 import { getAllRanks } from "../pocketbase/records/rank.js";
+import { updateMember } from "../pocketbase/records/member.js";
 
 export async function handleNewMessageExp(message) {
   if (message.author.bot) return;
@@ -43,6 +44,9 @@ export async function assignRole(member, exp) {
       `Rolle "${name}" existiert nicht auf dem Server "${guild.name}".`
     );
   }
+
+  // member in der DB updaten
+  await updateMember(member.id, { rank: id });
 
   // Bestehende Ränge entfernen
   const currentRanks = ranks.map((rank) => rank.name);
