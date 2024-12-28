@@ -20,6 +20,9 @@ export async function handleVoiceStateUpdate(oldState, newState) {
   // returnes for unwanted channels (the createChannel always gets switched to a new one)
   if ([afkChannelId, createChannelId].includes(newState.channel?.id)) return;
   if (!oldState.channel?.id && newState.channel?.id) {
+    logger.info(
+      `User ${newState?.member?.name} joined the channel ${newState?.channel?.name}`
+    );
     await handleJoinChannelEvent(oldState, newState);
   }
   if (
@@ -27,9 +30,15 @@ export async function handleVoiceStateUpdate(oldState, newState) {
     newState.channel?.id &&
     oldState.channel?.id !== newState.channel?.id
   ) {
+    logger.info(
+      `User ${newState?.member?.name} switched from channel ${oldState?.channel?.name} to channel ${newState?.channel?.name}`
+    );
     await handleChangeChannelEvent(oldState, newState);
   }
   if (oldState.channel?.id && !newState.channel?.id) {
+    logger.info(
+      `User ${oldState?.member?.name} switched left channel ${oldState?.channel?.name}`
+    );
     await handleLeaveChannelEvent(oldState, newState);
   }
 }
