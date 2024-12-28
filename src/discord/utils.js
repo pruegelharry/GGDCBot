@@ -88,5 +88,5 @@ export async function updateUserExp(userId, expToAdd) {
   if (newExp < rank.minimum || rank.maximum < newExp) {
     potentiallyNewRank = await getRankByXP(newExp);
   }
-  return updateMember(id, { exp: newExp, rankId: potentiallyNewRank.id });
+  return updateMember(id, { exp: newExp, rank: potentiallyNewRank.id });
 }

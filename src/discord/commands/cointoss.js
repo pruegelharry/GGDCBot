@@ -46,9 +46,12 @@ export async function execute(interaction) {
   const result = Math.floor(Math.random() * 100) > 50 ? "head" : "tail";
   const addedExp = result === subcommand ? amount : amount * -1;
   const updatedMember = await updateUserExp(interaction.user.id, addedExp);
-  await interaction.reply(
+  const msg = await interaction.reply(
     `The coin landed on ${result}, you have ${
       result === subcommand ? "won" : "lost"
     } ${amount} xp. Your remaining xp is ${updatedMember.exp}`
   );
+  setTimeout(() => {
+    msg.delete();
+  }, 60000 * 2);
 }
