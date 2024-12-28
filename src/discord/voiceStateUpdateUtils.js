@@ -21,7 +21,7 @@ export async function handleVoiceStateUpdate(oldState, newState) {
   if ([afkChannelId, createChannelId].includes(newState.channel?.id)) return;
   if (!oldState.channel?.id && newState.channel?.id) {
     logger.info(
-      `User ${newState?.member?.name} joined the channel ${newState?.channel?.name}`
+      `User ${newState?.member?.displayName} joined the channel ${newState?.channel?.name}`
     );
     await handleJoinChannelEvent(oldState, newState);
   }
@@ -31,13 +31,13 @@ export async function handleVoiceStateUpdate(oldState, newState) {
     oldState.channel?.id !== newState.channel?.id
   ) {
     logger.info(
-      `User ${newState?.member?.name} switched from channel ${oldState?.channel?.name} to channel ${newState?.channel?.name}`
+      `User ${newState?.member?.displayName} switched from channel ${oldState?.channel?.name} to channel ${newState?.channel?.name}`
     );
     await handleChangeChannelEvent(oldState, newState);
   }
   if (oldState.channel?.id && !newState.channel?.id) {
     logger.info(
-      `User ${oldState?.member?.name} switched left channel ${oldState?.channel?.name}`
+      `User ${oldState?.member?.displayName} switched left channel ${oldState?.channel?.name}`
     );
     await handleLeaveChannelEvent(oldState, newState);
   }
