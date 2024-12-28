@@ -1,4 +1,3 @@
-import { logger } from "../../logger.js";
 import { pb } from "../index.js";
 
 export async function getAllRanks() {
@@ -18,6 +17,15 @@ export async function getRankByName(name) {
   return pb
     .collection("rank")
     .getFirstListItem(`name="${name}"`)
+    .catch(
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
+    );
+}
+
+export async function getRankByXP(exp) {
+  return pb
+    .collection("rank")
+    .getFirstListItem(`minimum <= "${exp}" && maximum >= "${exp}"`)
     .catch(
       (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
     );

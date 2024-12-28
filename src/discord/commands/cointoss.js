@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import { getMemberById } from "../../pocketbase/records/member.js";
-import { updateUserExp } from "../../dataManager.js";
+import { updateUserExp } from "../utils.js";
 
 export const data = new SlashCommandBuilder()
   .setName("cointoss")

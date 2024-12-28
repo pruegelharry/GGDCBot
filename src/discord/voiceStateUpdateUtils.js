@@ -1,4 +1,3 @@
-import { updateUserExp } from "../dataManager.js";
 import { logger } from "../logger.js";
 import { getMemberById, updateMember } from "../pocketbase/records/member.js";
 import {
@@ -6,6 +5,7 @@ import {
   getVoiceChannelById,
   updateVoiceChannel,
 } from "../pocketbase/records/voiceChannel.js";
+import { updateUserExp } from "./utils.js";
 
 const afkChannelId = "918762888297074779";
 const createChannelId = "918814111209500703";
