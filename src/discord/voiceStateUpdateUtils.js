@@ -31,13 +31,13 @@ export async function handleVoiceStateUpdate(oldState, newState) {
     oldState.channel?.id !== newState.channel?.id
   ) {
     logger.info(
-      `User ${newState?.member?.displayName} switched from channel ${oldState?.channel?.name} to channel ${newState?.channel?.name}`
+      `User ${newState?.member?.displayName} switched from the channel ${oldState?.channel?.name} to the channel ${newState?.channel?.name}`
     );
     await handleChangeChannelEvent(oldState, newState);
   }
   if (oldState.channel?.id && !newState.channel?.id) {
     logger.info(
-      `User ${oldState?.member?.displayName} switched left channel ${oldState?.channel?.name}`
+      `User ${oldState?.member?.displayName} left the channel ${oldState?.channel?.name}`
     );
     await handleLeaveChannelEvent(oldState, newState);
   }
