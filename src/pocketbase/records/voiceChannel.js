@@ -13,7 +13,7 @@ export async function getVoiceChannelById(id) {
     .collection("voicechannel")
     .getOne(id)
     .catch(
-      (err) => (err.status === 404 ? undefined : logger.error(err)) // can be ignored since we know the channel might not yet exist
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the channel might not yet exist
     );
 }
 

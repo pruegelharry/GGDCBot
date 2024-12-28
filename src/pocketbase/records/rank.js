@@ -19,7 +19,7 @@ export async function getRankByName(name) {
     .collection("rank")
     .getFirstListItem(`name="${name}"`)
     .catch(
-      (err) => (err.status === 404 ? undefined : logger.error(err)) // can be ignored since we know that the rank might not yet exist
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
     );
 }
 

@@ -30,14 +30,14 @@ export async function assignRole(member, exp) {
   const { guild } = member;
   const { tag } = member.user;
   // name is the targetroles name
-  const { name, discordId } = ranks.find(
+  const { name, id } = ranks.find(
     (rank) => exp >= rank.minimum && exp <= rank.maximum
   );
 
   if (!name) {
     throw Error(`Keine passende Rolle für ${tag} (EXP: ${exp}) gefunden.`);
   }
-  const targetRole = await guild.roles.fetch(discordId);
+  const targetRole = await guild.roles.fetch(id);
   if (!targetRole) {
     throw Error(
       `Rolle "${name}" existiert nicht auf dem Server "${guild.name}".`

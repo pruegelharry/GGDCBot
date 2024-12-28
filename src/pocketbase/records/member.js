@@ -11,7 +11,7 @@ export async function addNewMember(id) {
   return pb.collection("member").create({
     id,
     exp: 0,
-    rank,
+    rank: rank.id,
   });
 }
 
@@ -20,7 +20,7 @@ export async function getMemberById(id) {
     .collection("member")
     .getOne(id)
     .catch(
-      (err) => (err.status === 404 ? undefined : logger.error(err)) // can be ignored since we know the member might not yet exist
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the member might not yet exist
     );
 }
 
