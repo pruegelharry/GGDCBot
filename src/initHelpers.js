@@ -1,7 +1,21 @@
 import { guildId } from "./index.js";
 import { logger } from "./logger.js";
-import { addNewMember, getAllMembers } from "./pocketbase/records/member.js";
-import { createRank, getAllRanks } from "./pocketbase/records/rank.js";
+import {
+  addNewMember,
+  getAllMembers,
+  updateMember,
+} from "./pocketbase/records/member.js";
+import {
+  createRank,
+  getAllRanks,
+  getRankById,
+  updateRank,
+} from "./pocketbase/records/rank.js";
+import {
+  createVoiceChannel,
+  getVoiceChannelById,
+  updateVoiceChannel,
+} from "./pocketbase/records/voiceChannel.js";
 
 export async function initializeRankIds(client) {
   const rankThresholds = [
@@ -16,14 +30,21 @@ export async function initializeRankIds(client) {
     { role: "Legende", minExp: 20000, maxExp: 29999 },
     { role: "Champion", minExp: 30000, maxExp: 10000000 },
   ];
-  const ranks = await getAllRanks();
   const guild = await client.guilds.fetch(guildId);
   const roles = await guild.roles.fetch();
-  if (ranks.length === rankThresholds.length) return;
-  rankThresholds.forEach((rank) => {
+  rankThresholds.forEach(async (rank) => {
     const role = roles.find((role) => role.name === rank.role);
     if (role) {
-      createRank(role.id, role.name, rank.minExp, rank.maxExp);
+      const existingRole = await getRankById(role.id);
+      if (existingRole) {
+        updateRank(role.id, {
+          name: role.name,
+          minimum: rank.minExp,
+          maximum: rank.maxExp,
+        });
+      } else {
+        createRank(role.id, role.name, rank.minExp, rank.maxExp);
+      }
     }
   });
 }
@@ -37,10 +58,17 @@ export async function initializeMembers(client) {
     const promises = [];
     members.forEach((dcMember) => {
       const foundPbMember = pbMembers.find(
-        (pbMember) => pbMember.id !== dcMember.id
+        (pbMember) => pbMember.id === dcMember.id
       );
       if (!foundPbMember) {
-        promises.push(addNewMember(dcMember.id));
+        promises.push(addNewMember(dcMember.id, dcMember.displayName));
+      }
+      if (foundPbMember && foundPbMember.displayName === "") {
+        promises.push(
+          updateMember(foundPbMember.id, {
+            displayName: dcMember.displayName,
+          })
+        );
       }
     });
     try {
@@ -51,4 +79,28 @@ export async function initializeMembers(client) {
       );
     }
   }
+}
+
+export async function initVoiceChannels(client) {
+  const guild = await client.guilds.fetch(guildId);
+  const members = await guild.members.fetch();
+  // kann ausgetauscht werden mit der logik aus joinChannel()
+  members.each(async (member) => {
+    if (member?.voice?.channel) {
+      updateMember(member.id, {
+        enteredChannel: new Date(),
+      });
+      const vc = await getVoiceChannelById(member.voice.channelId);
+      if (vc) {
+        return updateVoiceChannel(member.voice.channelId, {
+          members: member.voice.channel.members.map((_, key) => key),
+        }).catch((e) =>
+          logger.error("initVoiceChannels_updateVoiceChannel", e)
+        );
+      }
+      return createVoiceChannel(member.voice.channelId, {
+        members: member.voice.channel.members.map((_, key) => key),
+      }).catch((e) => logger.error("initVoiceChannels_createVoiceChannel", e));
+    }
+  });
 }

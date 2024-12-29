@@ -13,6 +13,19 @@ export async function createRank(id, name, minimum, maximum) {
   });
 }
 
+export async function updateRank(id, args) {
+  return pb.collection("rank").update(id, args);
+}
+
+export async function getRankById(id) {
+  return pb
+    .collection("rank")
+    .getOne(id)
+    .catch(
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
+    );
+}
+
 export async function getRankByName(name) {
   return pb
     .collection("rank")

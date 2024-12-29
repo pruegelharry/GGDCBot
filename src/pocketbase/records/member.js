@@ -6,12 +6,13 @@ export async function getAllMembers() {
   return pb.collection("member").getFullList();
 }
 
-export async function addNewMember(id) {
+export async function addNewMember(id, displayName) {
   const rank = await getRankByName("Plastik");
   return pb.collection("member").create({
     id,
     exp: 0,
     rank: rank.id,
+    displayName,
   });
 }
 

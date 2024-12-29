@@ -10,7 +10,11 @@ import {
 import { logger } from "./logger.js";
 import { handleNewMessageExp } from "./discord/utils.js";
 import { initializePoketBase } from "./pocketbase/index.js";
-import { initializeMembers, initializeRankIds } from "./initHelpers.js";
+import {
+  initializeMembers,
+  initializeRankIds,
+  initVoiceChannels,
+} from "./initHelpers.js";
 import {
   data as lowerHigherData,
   execute as lowerHigherFunc,
@@ -59,6 +63,7 @@ client.once(Events.ClientReady, async (client) => {
   initializePoketBase(POCKETBASE_AUTH);
   await initializeRankIds(client);
   await initializeMembers(client);
+  await initVoiceChannels(client);
   // initially look for ppl in voiceChannels to start counting voicetime
   logger.info(`Bot ist online! Eingeloggt als ${client.user.tag}`);
 });
