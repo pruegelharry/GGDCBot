@@ -9,7 +9,7 @@ import {
 export async function handleNewMessageExp(message) {
   if (message.author.bot) return;
 
-  const expGained = 10;
+  const expGained = 1;
   let updatedUser;
   try {
     updatedUser = await updateUserExp(message.author.id, expGained);

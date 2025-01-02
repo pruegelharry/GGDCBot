@@ -23,6 +23,11 @@ import {
   data as cointossData,
   execute as cointossFunc,
 } from "./discord/commands/cointoss.js";
+import { data as expData, execute as expFunc } from "./discord/commands/exp.js";
+import {
+  data as voicetimeData,
+  execute as voicetimeFunc,
+} from "./discord/commands/voicetime.js";
 import { handleVoiceStateUpdate } from "./discord/voiceStateUpdateUtils.js";
 dotenv.config();
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -42,11 +47,15 @@ export const clientId = "1313854803343839272";
 client.commands = new Collection();
 client.commands.set(lowerHigherData.name, lowerHigherFunc);
 client.commands.set(cointossData.name, cointossFunc);
+client.commands.set(expData.name, expFunc);
+client.commands.set(voicetimeData.name, voicetimeFunc);
 
 // registers the commands immediately with the guild
 const commands = [];
 commands.push(lowerHigherData.toJSON());
 commands.push(cointossData.toJSON());
+commands.push(expData.toJSON());
+commands.push(voicetimeData.toJSON());
 const rest = new REST().setToken(TOKEN);
 (async () => {
   try {

@@ -135,5 +135,5 @@ async function getNewTotalTime(id) {
 }
 
 function calculateXp(activeTime) {
-  return Math.floor(activeTime / 60 / 1000) * 5;
+  return Math.floor(activeTime / 60 / 1000) * 1;
 }
