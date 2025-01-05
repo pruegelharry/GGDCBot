@@ -5,7 +5,9 @@ export async function createVoiceChannel(id, args) {
   return pb.collection("voicechannel").create({
     id,
     ...args,
-  });
+  }).catch(
+    (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the channel might not yet exist
+  );
 }
 
 export async function getVoiceChannelById(id) {
@@ -18,5 +20,7 @@ export async function getVoiceChannelById(id) {
 }
 
 export async function updateVoiceChannel(id, args) {
-  return pb.collection("voicechannel").update(id, args);
+  return pb.collection("voicechannel").update(id, args).catch(
+    (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the channel might not yet exist
+  );
 }

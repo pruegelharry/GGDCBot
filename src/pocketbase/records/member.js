@@ -26,5 +26,7 @@ export async function getMemberById(id) {
 }
 
 export async function updateMember(id, args) {
-  return pb.collection("member").update(id, args);
+  return pb.collection("member").update(id, args).catch(
+    (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the member might not yet exist
+  );
 }
