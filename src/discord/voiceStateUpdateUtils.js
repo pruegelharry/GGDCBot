@@ -54,7 +54,7 @@ async function handleJoinChannelEvent(oldState, newState) {
 }
 
 async function handleChangeChannelEvent(oldState, newState) {
-  const { id } = newState.member;
+  const { id, displayName } = newState.member;
   const { totalTime, activeTime } = await getNewTotalTime(id).catch((err) =>
     logger.error("handleChangeChannelEvent_getNewTotalTime", err)
   );
@@ -66,7 +66,7 @@ async function handleChangeChannelEvent(oldState, newState) {
     logger.error("handleChangeChannelEvent_joinNewChannel", err)
   );
   // x * 0.005 gleich wie 5 * x / 1000
-  await updateUserExp(id, calculateXp(activeTime)).catch((err) =>
+  await updateUserExp(id, displayName, calculateXp(activeTime)).catch((err) =>
     logger.error("handleChangeChannelEvent_updateUserExp", err)
   );
   return updateMember(id, {
@@ -76,7 +76,7 @@ async function handleChangeChannelEvent(oldState, newState) {
 }
 
 async function handleLeaveChannelEvent(oldState, newState) {
-  const { id } = newState.member;
+  const { id, displayName } = newState.member;
   const { totalTime, activeTime } = await getNewTotalTime(id).catch((err) =>
     logger.error("handleLeaveChannelEvent_getNewTotalTime", err)
   );
@@ -85,7 +85,7 @@ async function handleLeaveChannelEvent(oldState, newState) {
     logger.error("handleLeaveChannelEvent_leaveOldChannel", err)
   );
   // x * 0.005 gleich wie 5 * x / 1000
-  await updateUserExp(id, calculateXp(activeTime)).catch((err) =>
+  await updateUserExp(id, displayName, calculateXp(activeTime)).catch((err) =>
     logger.error("handleLeaveChannelEvent_updateUserExp", err)
   );
   return updateMember(id, {
