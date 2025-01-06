@@ -1,3 +1,5 @@
+import "./sentry/index.js"
+import "./sentry/heartbeat.js"
 import dotenv from "dotenv";
 import {
   Client,
@@ -32,7 +34,10 @@ import { handleVoiceStateUpdate } from "./discord/voiceStateUpdateUtils.js";
 dotenv.config();
 const TOKEN = process.env.DISCORD_TOKEN;
 const POCKETBASE_AUTH = process.env.POCKETBASE_AUTH;
-const client = new Client({
+export const guildId = "918759632485355521";
+export const clientId = "1313854803343839272";
+
+export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
@@ -41,9 +46,6 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
   ],
 });
-export const guildId = "918759632485355521";
-export const clientId = "1313854803343839272";
-
 client.commands = new Collection();
 client.commands.set(lowerHigherData.name, lowerHigherFunc);
 client.commands.set(cointossData.name, cointossFunc);
