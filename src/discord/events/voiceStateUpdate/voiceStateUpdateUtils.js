@@ -1,20 +1,17 @@
-import { logger } from "../logger.js";
-import { getMemberById, updateMember } from "../pocketbase/records/member.js";
+import { logger } from "../../../logger.js";
+import {
+  getMemberById,
+  updateMember,
+} from "../../../pocketbase/records/member.js";
 import {
   createVoiceChannel,
   getVoiceChannelById,
   updateVoiceChannel,
-} from "../pocketbase/records/voiceChannel.js";
-import { updateUserExp } from "./utils.js";
+} from "../../../pocketbase/records/voiceChannel.js";
+import { updateUserExp } from "../../utils.js";
 
 const afkChannelId = "918762888297074779";
 const createChannelId = "918814111209500703";
-
-const STATE = {
-  JOINED: "joined",
-  CHANGED: "changed",
-  LEFT: "left",
-};
 
 export async function handleVoiceStateUpdate(oldState, newState) {
   // returnes for unwanted channels (the createChannel always gets switched to a new one)
