@@ -34,8 +34,6 @@ export const client = new Client({
   ],
 });
 client.commands = new Collection();
-
-client.commands = new Collection();
 client.commands.set(lowerHigherData.name, lowerHigherFunc);
 client.commands.set(cointossData.name, cointossFunc);
 client.commands.set(expData.name, expFunc);
