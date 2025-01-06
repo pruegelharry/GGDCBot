@@ -1,21 +1,20 @@
-import { guildId } from "./index.js";
-import { logger } from "./logger.js";
+import { logger } from "../../../logger.js";
 import {
   addNewMember,
   getAllMembers,
   updateMember,
-} from "./pocketbase/records/member.js";
+} from "../../../pocketbase/records/member.js";
 import {
   createRank,
-  getAllRanks,
   getRankById,
   updateRank,
-} from "./pocketbase/records/rank.js";
+} from "../../../pocketbase/records/rank.js";
 import {
   createVoiceChannel,
   getVoiceChannelById,
   updateVoiceChannel,
-} from "./pocketbase/records/voiceChannel.js";
+} from "../../../pocketbase/records/voiceChannel.js";
+import { guildId } from "../../index.js";
 
 export async function initializeRankIds(client) {
   const rankThresholds = [

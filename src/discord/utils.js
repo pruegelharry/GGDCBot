@@ -12,7 +12,11 @@ export async function handleNewMessageExp(message) {
   const expGained = 1;
   let updatedUser;
   try {
-    updatedUser = await updateUserExp(message.author.id, message.author.displayName, expGained);
+    updatedUser = await updateUserExp(
+      message.author.id,
+      message.author.displayName,
+      expGained
+    );
   } catch (error) {
     logger.error(error);
   }
@@ -75,7 +79,7 @@ export async function assignRole(member, exp) {
 }
 
 // Benutzer-EXP aktualisieren
-export async function updateUserExp(userId, displayName,  expToAdd) {
+export async function updateUserExp(userId, displayName, expToAdd) {
   let member = await getMemberById(userId);
   // check ob benutzer schon existiert
   if (!member?.id) {

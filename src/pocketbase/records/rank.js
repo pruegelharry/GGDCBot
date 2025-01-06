@@ -14,9 +14,12 @@ export async function createRank(id, name, minimum, maximum) {
 }
 
 export async function updateRank(id, args) {
-  return pb.collection("rank").update(id, args).catch(
-    (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
-  );
+  return pb
+    .collection("rank")
+    .update(id, args)
+    .catch(
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
+    );
 }
 
 export async function getRankById(id) {
@@ -45,4 +48,3 @@ export async function getRankByXP(exp) {
       (err) => (err.status === 404 ? undefined : err) // can be ignored since we know that the rank might not yet exist
     );
 }
-

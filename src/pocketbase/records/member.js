@@ -1,6 +1,5 @@
-import { logger } from "../../logger.js";
 import { pb } from "../index.js";
-import { getAllRanks, getRankByName } from "./rank.js";
+import {  getRankByName } from "./rank.js";
 
 export async function getAllMembers() {
   return pb.collection("member").getFullList();
@@ -26,7 +25,10 @@ export async function getMemberById(id) {
 }
 
 export async function updateMember(id, args) {
-  return pb.collection("member").update(id, args).catch(
-    (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the member might not yet exist
-  );
+  return pb
+    .collection("member")
+    .update(id, args)
+    .catch(
+      (err) => (err.status === 404 ? undefined : err) // can be ignored since we know the member might not yet exist
+    );
 }
