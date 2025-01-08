@@ -1,0 +1,2 @@
+docker build -t tango .
+docker run -it --rm --name tango tango
