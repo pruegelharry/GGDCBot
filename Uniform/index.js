@@ -1,4 +1,3 @@
-import leftPad from"left-pad"
- 
-const result = leftPad('foo', 5)
-console.log(result)
+import { test } from "./test.js";
+
+const result = test()
